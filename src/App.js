@@ -1,7 +1,70 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { Converter } from "./components/converter";
 
+const URL =
+  "http://api.exchangeratesapi.io/v1/latest?access_key=3005f50d2e88f6b23f2698283d9f900a";
+
 export const App = () => {
+  const [currentOptions, setCurrentOptions] = useState([]);
+  const [fromCurrency, setFromCurrency] = useState();
+  const [toCurrency, setToCurrency] = useState();
+  const [exchangeRate, setExchangeRate] = useState();
+  const [amount, setAmount] = useState(1);
+  const [amountInFromCurrency, setAmountInFromCurrency] = useState(true);
+
+  let toAmount, fromAmount;
+  if (amountInFromCurrency) {
+    fromAmount = amount;
+    toAmount = amount * exchangeRate;
+  } else {
+    toAmount = amount;
+    fromAmount = amount / exchangeRate;
+  }
+
+  useEffect(() => {
+    async function getData() {
+      try {
+        const response = await axios.get(URL);
+        const { data } = response;
+        setCurrentOptions([data.base, ...Object.keys(data.rates)]);
+        setFromCurrency(data.base);
+        setToCurrency(Object.keys(data.rates)[0]);
+        setExchangeRate(data.rates[Object.keys(data.rates)[0]]);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+    getData();
+  }, []);
+
+  useEffect(() => {
+    if (fromCurrency != null && toCurrency != null) {
+      async function getLatestData() {
+        try {
+          const response = await axios.get(
+            `${URL}&base=${fromCurrency}&symbols=${toCurrency}`
+          );
+          const { data } = response;
+          setExchangeRate(data.rates[toCurrency]);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      getLatestData();
+    }
+  }, [amount, fromCurrency, toCurrency]);
+
+  const HandleFromAmountChange = (event) => {
+    setAmount(event.target.value);
+    setAmountInFromCurrency(true);
+  };
+
+  const HandleToAmountChange = (event) => {
+    setAmount(event.target.value);
+    setAmountInFromCurrency(false);
+  };
+
   return (
     <div>
       <div className="max-w-4xl  m-auto pb-6 pt-14">
@@ -10,7 +73,15 @@ export const App = () => {
             Currency Exchange Rate
           </h1>
           <div className="flex flex-row mb-6 gap-9 items-end">
-            <Converter />
+            <Converter
+              currentOptions={currentOptions}
+              selectedCurrency={fromCurrency}
+              onChangeCurrencyHandler={(event) =>
+                setFromCurrency(event.target.value)
+              }
+              amount={fromAmount}
+              onChangeAmountHandler={HandleFromAmountChange}
+            />
             <div className="border-2 rounded-full p-4 cursor-pointer border-blue-500">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -27,7 +98,15 @@ export const App = () => {
                 ></path>
               </svg>
             </div>
-            <Converter />
+            <Converter
+              currentOptions={currentOptions}
+              selectedCurrency={toCurrency}
+              onChangeCurrencyHandler={(event) =>
+                setToCurrency(event.target.value)
+              }
+              amount={toAmount}
+              onChangeAmountHandler={HandleToAmountChange}
+            />
           </div>
         </div>
       </div>
