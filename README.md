@@ -1,2 +1,2 @@
-# currency-converter
+# Currency Converter
 Live foreign currency exchange rates
